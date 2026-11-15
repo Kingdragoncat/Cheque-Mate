@@ -1,0 +1,402 @@
+<html lang="en-us"><script src="{{cookiecutter.cdn}}pythons.js" type=module id="site" data-python="python{{cookiecutter.PYBUILD}}" data-LINES=42 data-COLUMNS=132 data-os="vtx,snd,gui" async defer>#<!--
+
+print("""
+Loading {{cookiecutter.title}} from {{cookiecutter.archive}}.apk
+    Pygbag Version : {{cookiecutter.version}}
+    Python  : {{cookiecutter.PYBUILD}}
+    Screen  : {{cookiecutter.width}}x{{cookiecutter.height}}
+    Title   : {{cookiecutter.title}}
+""")
+
+import sys
+import asyncio
+import platform
+import json
+from pathlib import Path
+
+# do not rename
+async def custom_site():
+    import embed
+    platform.document.body.style.background = "#0d111a"
+
+    platform.window.transfer.hidden = True
+    platform.window.canvas.style.visibility = "visible"
+
+    bundle = "{{cookiecutter.archive}}"
+    appdir = Path(f"/data/data/{bundle}")
+    appdir.mkdir()
+
+    def set_progress(pct):
+        try:
+            bar = platform.document.getElementById("cm_bar_fill")
+            if bar is not None:
+                bar.style.width = f"{pct}%"
+        except Exception:
+            pass
+
+    platform.window.infobox.innerText = "Loading assets..."
+    set_progress(25)
+
+    if platform.window.location.host.find('.itch.zone') > 0:
+        import zipfile
+        async with platform.fopen("{{cookiecutter.archive}}.apk", "rb") as archive:
+            with zipfile.ZipFile(archive) as zip_ref:
+                zip_ref.extractall(appdir.as_posix())
+    else:
+        import tarfile
+        async with platform.fopen("{{cookiecutter.archive}}.tar.gz", "rb") as archive:
+            tar = tarfile.open(fileobj=archive, mode="r:gz")
+            tar.extractall(path=appdir.as_posix(), filter='tar')
+            tar.close()
+
+    platform.window.infobox.innerText = "Starting Python..."
+    set_progress(55)
+    platform.run_main(PyConfig, loaderhome=appdir / "assets", loadermain=None)
+
+    while embed.counter() < 0:
+        await asyncio.sleep(.05)
+
+    main = appdir / "assets" / "main.py"
+    set_progress(80)
+
+    if not platform.window.MM.UME:
+        __import__(__name__).__file__ = main
+        set_progress(100)
+        platform.window.infobox.innerText = "Click anywhere to start"
+        try:
+            platform.window.infobox.className = "cm-status cm-ready"
+        except Exception:
+            pass
+        while not platform.window.MM.UME:
+            await asyncio.sleep(.05)
+
+    platform.window.infobox.innerText = "Loading game..."
+    set_progress(95)
+    await TopLevel_async_handler.start_toplevel(platform.shell, console=0)
+
+    __import__(__name__).__file__ = main
+
+    def ui_callback(pkg):
+        platform.window.infobox.innerText = f"Loading {pkg}..."
+
+    await shell.source(main, callback=ui_callback)
+    set_progress(100)
+
+    platform.window.infobox.style.display = "none"
+    overlay = platform.document.getElementById("loading_overlay")
+    if overlay is not None:
+        overlay.style.display = "none"
+    platform.window.canvas.style.pointerEvents = "auto"
+    platform.window.config.gui_divider = 1
+    platform.window.window_resize()
+
+asyncio.run(custom_site())
+
+# --></script><head><!--
+{%- if cookiecutter.comment != "" -%}
+{{cookiecutter.comment}}
+{% endif %}
+--><script type="application/javascript">
+config = {
+    xtermjs : "0",
+    _sdl2 : "canvas",
+    user_canvas : 1,
+    user_canvas_managed : 1,
+    gui_divider : 1,
+    ume_block : {{cookiecutter.ume_block}},
+    can_close : 0,
+    archive : "{{cookiecutter.archive}}",
+    gui_debug : 0,
+    cdn : "{{cookiecutter.cdn}}",
+    autorun : {{cookiecutter.autorun}},
+    PYBUILD : "{{cookiecutter.PYBUILD}}",
+    fb_ar   : 1.7777778,
+    fb_width : "{{cookiecutter.width}}",
+    fb_height : "{{cookiecutter.height}}"
+};
+
+function show_infobox() {
+    const overlay = document.getElementById("loading_overlay");
+    if (overlay) {
+        overlay.style.display = "flex";
+    }
+    const ib = document.getElementById("infobox");
+    if (ib) {
+        ib.style.display = "block";
+    }
+}
+
+window.cmMusic = {
+    audio: new Audio(),
+    currentSrc: "",
+    endedFlag: false,
+    wantPlay: false,
+    play: function(url, vol) {
+        try {
+            this.endedFlag = false;
+            this.wantPlay = true;
+            if (this.currentSrc !== url) {
+                this.currentSrc = url;
+                this.audio.src = url;
+            }
+            this.audio.loop = false;
+            this.audio.volume = Math.max(0, Math.min(1, vol));
+            this.audio.currentTime = 0;
+            const p = this.audio.play();
+            if (p && p.catch) { p.catch(function(){}); }
+            return true;
+        } catch (e) { return false; }
+    },
+    setVolume: function(vol) {
+        try {
+            this.audio.volume = Math.max(0, Math.min(1, vol));
+            if (vol > 0 && this.wantPlay && this.audio.paused && !this.endedFlag && this.currentSrc) {
+                const p = this.audio.play();
+                if (p && p.catch) { p.catch(function(){}); }
+            }
+        } catch (e) {}
+    },
+    isBusy: function() {
+        if (!this.currentSrc) return false;
+        return !this.endedFlag && !this.audio.ended;
+    }
+};
+window.cmMusic.audio.addEventListener("ended", function() {
+    window.cmMusic.endedFlag = true;
+});
+</script>
+
+    <title>{{cookiecutter.title}}</title>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            background: #0d111a;
+            font-family: "Consolas", "Courier New", monospace;
+            color: #eef3ff;
+        }
+
+        canvas.emscripten {
+            border: 0px none;
+            background-color: #0d111a;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            padding: 0;
+            margin: 0 auto;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            pointer-events: none;
+            outline: none;
+        }
+
+        #loading_overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #10131a;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .cm-card {
+            width: min(420px, calc(100vw - 48px));
+            text-align: center;
+        }
+
+        .cm-title {
+            margin: 0 0 18px;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: #f0f4fa;
+        }
+
+        .cm-bar-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #222834;
+            overflow: hidden;
+        }
+
+        .cm-bar-fill {
+            width: 12%;
+            height: 100%;
+            border-radius: 5px;
+            background: #e6b84c;
+            transition: width 0.25s ease-out;
+        }
+
+        .cm-status {
+            margin-top: 12px;
+            color: #9aa6bc;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .cm-status.cm-ready {
+            color: #f0f4fa;
+            cursor: pointer;
+        }
+
+        /* Lock down pygbag console/debug panels so players cannot break out of loader */
+        #transfer, #crt, #system, #box, #info, #pyconsole, #terminal, #dlg, #html {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+    </style>
+
+    <script src="{{cookiecutter.cdn}}browserfs.min.js"></script>
+</head>
+
+<body oncontextmenu="return false;">
+    <div id="loading_overlay">
+        <div class="cm-card">
+            <h1 class="cm-title">Cheque Mate</h1>
+            <div class="cm-bar-track">
+                <div id="cm_bar_fill" class="cm-bar-fill"></div>
+            </div>
+            <div id="infobox" class="cm-status">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Required by pygbag runtime loader (kept visually hidden) -->
+    <div id="transfer" align="center" hidden>
+        <div id="status">Downloading...</div>
+        <progress value="0" max="100" id="progress"></progress>
+    </div>
+
+    <canvas class="emscripten" id="canvas" width="1280" height="720" oncontextmenu="event.preventDefault()" tabindex="1"></canvas>
+    <canvas class="emscripten" id="canvas3d" width="1280px" height="720px" oncontextmenu="event.preventDefault()" tabindex="1" hidden></canvas>
+
+    <div id="html"></div>
+    <div id="crt" class="bottomright" hidden>
+        <div id="system" hidden>
+            <button id="aiostop" disabled></button>
+            <button id="aiopaused_true" disabled></button>
+            <button id="aiopaused_false" disabled></button>
+            <button id="pygame_mixer_music_pause" disabled></button>
+            <div id="load_min"></div>
+            <div id="load_avg"></div>
+            <div id="load_max"></div>
+            <button id="load_rst" disabled></button>
+            <div id="level"></div>
+            <div id="stateBattery"></div>
+        </div>
+        <div id="box" hidden>
+            <div id="info"></div>
+            <iframe id="iframe" name="iframe"></iframe>
+        </div>
+    </div>
+    <div id="dlg" hidden>
+        <input type="file" id="dlg_multifile" multiple accept="image/*">
+    </div>
+    <div id="pyconsole" hidden>
+        <div id="terminal" tabIndex="-1"></div>
+    </div>
+
+    <script type="application/javascript">
+    globalThis.__canvas_resized = () => {};
+    globalThis.debug = () => {};
+
+    async function custom_onload() {
+        show_infobox();
+    }
+    function custom_prerun() {}
+    function custom_postrun() {}
+
+    (() => {
+        const overlay = document.getElementById("loading_overlay");
+        const ib = document.getElementById("infobox");
+        const barFill = document.getElementById("cm_bar_fill");
+        const prog = document.getElementById("progress");
+        const canvas = document.getElementById("canvas");
+
+        const fitCanvas = () => {
+            if (!canvas) return;
+            const ar = 1280 / 720;
+            const vw = Math.max(320, window.innerWidth || 1280);
+            const vh = Math.max(180, window.innerHeight || 720);
+            let w = vw;
+            let h = Math.floor(w / ar);
+            if (h > vh) {
+                h = vh;
+                w = Math.floor(h * ar);
+            }
+            const targetW = w + "px";
+            const targetH = h + "px";
+            if (canvas.style.width !== targetW) canvas.style.width = targetW;
+            if (canvas.style.height !== targetH) canvas.style.height = targetH;
+            canvas.style.position = "absolute";
+            canvas.style.left = "0";
+            canvas.style.right = "0";
+            canvas.style.top = "0";
+            canvas.style.bottom = "0";
+            canvas.style.margin = "auto";
+        };
+        window.addEventListener("resize", fitCanvas);
+        if (canvas) {
+            new MutationObserver(fitCanvas).observe(canvas, {
+                attributes: true,
+                attributeFilter: ["width", "height"]
+            });
+        }
+        fitCanvas();
+
+        // Block Escape / Space / arrow / Tab keys from scrolling or breaking out while loading overlay is active
+        window.addEventListener("keydown", (e) => {
+            if (overlay && overlay.style.display !== "none") {
+                if (["Escape", "Space", " ", "Tab", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c") {
+                e.stopPropagation();
+            }
+        }, true);
+
+        const syncProgress = () => {
+            if (!overlay || overlay.style.display === "none") return;
+            if (ib && ib.style.display === "none") {
+                overlay.style.display = "none";
+                if (canvas) canvas.style.pointerEvents = "auto";
+                return;
+            }
+            if (prog && barFill && prog.max > 0 && prog.value > 0) {
+                const pct = Math.max(12, Math.min(100, (prog.value / prog.max) * 100));
+                barFill.classList.remove("cm-indet");
+                barFill.style.width = pct.toFixed(1) + "%";
+            }
+        };
+
+        if (ib) {
+            new MutationObserver(syncProgress).observe(ib, {
+                attributes: true,
+                attributeFilter: ["style", "class"]
+            });
+        }
+        setInterval(syncProgress, 100);
+    })();
+    </script>
+</body>
+</html>
